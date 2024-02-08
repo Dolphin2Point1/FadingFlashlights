@@ -7,6 +7,8 @@ Lethal Company's flashlights are fun, but they are mostly static. Let's fix that
 With this mod, over time your flashlight will dim in brightness. By default, either type of flashlight starts to fade at 50% battery,
 starting slowly, but dimming faster and faster over time, finally reaching no light at no battery.
 
+This works for the regular and pro flashlights, but might not work with flashlights from other mods.
+
 # Config
 
 ## Fade Start
