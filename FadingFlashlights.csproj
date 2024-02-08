@@ -36,5 +36,8 @@
     <Reference Include="Unity.Netcode.Components">
       <HintPath>lib\UnityEngine.Netcode.Components.dll</HintPath>
     </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>lib\Unity.Collections.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>
