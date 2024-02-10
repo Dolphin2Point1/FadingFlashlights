@@ -102,6 +102,8 @@ namespace FadingFlashlights
             FFConfig.MessageManager.RegisterNamedMessageHandler("FadingFlashlights_OnReceiveConfigSync", FFConfig.OnReceiveSync);
             FFConfig.RequestSync();
         }
+
+        
     } 
 
     [Serializable]
@@ -140,6 +142,12 @@ namespace FadingFlashlights
                 "your flashlight will get dark quickly, and stay dark. Zero means that the light brightness will follow a straight line over time. " +
                 "By default, this is set to -1, which corresponds to a square root."
             );
+            startFade = configStartFade.Value;
+            finalBrightness = configFinalBrightness.Value;
+            functionExponent = configFunctionExponent.Value;
+        }
+
+        public void ReloadConfig() {
             startFade = configStartFade.Value;
             finalBrightness = configFinalBrightness.Value;
             functionExponent = configFunctionExponent.Value;
