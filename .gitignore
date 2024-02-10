@@ -2,3 +2,4 @@ lib/*
 obj/
 bin/
 package/BepInEx/plugins/*
+fadingflashlights.zip

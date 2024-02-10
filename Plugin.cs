@@ -103,7 +103,7 @@ namespace FadingFlashlights
             FFConfig.RequestSync();
         }
 
-        
+
     } 
 
     [Serializable]
@@ -151,6 +151,7 @@ namespace FadingFlashlights
             startFade = configStartFade.Value;
             finalBrightness = configFinalBrightness.Value;
             functionExponent = configFunctionExponent.Value;
+            RequestSync();
         }
 
         public static void RequestSync() {

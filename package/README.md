@@ -31,7 +31,7 @@ Any number is acceptable.
 
 ### I am a math nerd
 
-The above two config options create a linear line, that goes through points (0, FadeFinalBrightness), and ending at (FadeStart, 1).
+The above two config options create a linear line, that goes through points (0, FadeFinalBrightness), and ending at (FadeStart, 1).  
 Then, we put the output of that line at the specified charge value for x^(2^FadeFunctionExponent).
 
 **This means that if you put in -1, you take the square root. If you put in -2, you are doing the fourth root. If you put in 1, your
@@ -41,9 +41,9 @@ square, and if you put in 2, you put it to the power of four. If you put in 0, t
 
 This affects how quickly your flashlight runs out of battery.
 
-If you put in a negative number, it will start staying brighter for longer, but the brightness will decrease faster and faster over time.
-If you put in a positive number, it will start decreasing quickly, but the rate will slow down over time.
-If you put in zero, the brightness will decrease at the same rate over time.
+**If you put in a negative number, it will start staying brighter for longer, but the brightness will decrease faster and faster over time.**  
+**If you put in a positive number, it will start decreasing quickly, but the rate will slow down over time.**  
+**If you put in zero, the brightness will decrease at the same rate over time.**
 
 
 *Default: -1 (square root)*
@@ -52,6 +52,7 @@ If you put in zero, the brightness will decrease at the same rate over time.
 # Credits
 I wrote all of the code myself, and drew the logo, but that doesn't mean I got no help.
 
-Mommyplier - Help with Programming, Math, and the Logo
-Braydon3DS - Emotional Support and distracting me with *Ratchet and Clank*
-TheRealMutt - Not believing that I could create a mod
+Mommyplier - Help with Programming, Math, and the Logo  
+Braydon3DS - Emotional Support and distracting me with *Ratchet and Clank*  
+TheRealMutt - Not believing that I could create a mod  
+ 
