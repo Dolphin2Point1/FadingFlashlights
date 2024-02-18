@@ -17,6 +17,22 @@ namespace FadingFlashlights
         public static ManualLogSource sLogger { get; internal set; }
         public static FFConfig FFConfig { get; internal set; }
 
+        private static void NetcodePatcher()
+        {
+            var types = Assembly.GetExecutingAssembly().GetTypes();
+            foreach (var type in types)
+            {
+                var methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                foreach (var method in methods)
+                {
+                    var attributes = method.GetCustomAttributes(typeof(RuntimeInitializeOnLoadMethodAttribute), false);
+                    if (attributes.Length > 0)
+                    {
+                        method.Invoke(null, null);
+                    }
+                }
+            }
+        }
         private void Awake()
         {
             sLogger = Logger;
@@ -25,6 +41,7 @@ namespace FadingFlashlights
             
             FFConfig = new FFConfig(Config);
 
+            NetcodePatcher();
             Harmony.CreateAndPatchAll(typeof(Patches));
             Logger.LogInfo($"Plugin {PluginInfo.PLUGIN_GUID} is loaded!");
         }
@@ -32,8 +49,6 @@ namespace FadingFlashlights
 
     class Patches {
         public static ManualLogSource logger;
-        private static readonly FieldInfo gameObjectField = typeof(MonoBehaviour)
-            .GetField("gameObject", BindingFlags.NonPublic | BindingFlags.Instance);
 
         [HarmonyPatch(typeof(FlashlightItem), "Start")]
         [HarmonyPrefix]
@@ -47,41 +62,7 @@ namespace FadingFlashlights
         public static void PocketItem(FlashlightItem __instance) {
             __instance.gameObject.GetComponent<FlashlightFaderComponent>().PocketItem();
         }
-    }
-
-    public class FlashlightFaderComponent : MonoBehaviour {
-        public FlashlightItem flashlight;
-        private Color initialBulbColor;
-        private Color initialBulbGlowColor;
-        private Color initialHelmetLightColor;
-        private static readonly FieldInfo previousPlayerHeldBy = typeof(FlashlightItem)
-            .GetField("previousPlayerHeldBy", BindingFlags.NonPublic | BindingFlags.Instance);
         
-        void Start() {
-            initialBulbColor = flashlight.flashlightBulb.color;
-            initialBulbGlowColor = flashlight.flashlightBulbGlow.color;
-        }
-
-        void Update() {
-            float p1 = 1-Plugin.FFConfig.startFade;
-            float p2 = Plugin.FFConfig.finalBrightness;
-            float unclamped = (1-p2)/p1*(flashlight.insertedBattery.charge-p1)+1;
-            float clamped = Mathf.Pow(Mathf.Clamp(unclamped,0,1), Mathf.Pow(2, Plugin.FFConfig.functionExponent));
-            if(flashlight.usingPlayerHelmetLight) {
-                PlayerControllerB player = (PlayerControllerB)previousPlayerHeldBy.GetValue(flashlight);
-                player.helmetLight.color = initialHelmetLightColor * clamped;
-            } else {
-                flashlight.flashlightBulb.color = initialBulbColor * clamped;
-                flashlight.flashlightBulbGlow.color = initialBulbGlowColor * clamped;
-            }
-        }
-
-        public void PocketItem() {
-            PlayerControllerB player = (PlayerControllerB)previousPlayerHeldBy.GetValue(flashlight);
-            initialHelmetLightColor = player.helmetLight.color;
-        }
-
-
         [HarmonyPostfix]
         [HarmonyPatch(typeof(GameNetworkManager), "StartDisconnect")]
         public static void PlayerLeave() {
@@ -102,8 +83,74 @@ namespace FadingFlashlights
             FFConfig.MessageManager.RegisterNamedMessageHandler("FadingFlashlights_OnReceiveConfigSync", FFConfig.OnReceiveSync);
             FFConfig.RequestSync();
         }
+    }
 
+    public class FlashlightFaderComponent : NetworkBehaviour {
+        public FlashlightItem flashlight;
+        private Color initialBulbColor;
+        private Color initialBulbGlowColor;
+        private Color initialHelmetLightColor;
+        private float timeSinceLastSync;
+        private static readonly FieldInfo previousPlayerHeldBy = typeof(FlashlightItem)
+            .GetField("previousPlayerHeldBy", BindingFlags.NonPublic | BindingFlags.Instance);
+        
+        void Start() {
+            initialBulbColor = flashlight.flashlightBulb.color;
+            initialBulbGlowColor = flashlight.flashlightBulbGlow.color;
+        }
 
+        void Update() {
+            if(flashlight.isBeingUsed) {
+                if(IsOwner) {
+                    timeSinceLastSync += Time.deltaTime;
+                    if(timeSinceLastSync > 5f) {
+                        BatteryChargeSyncServerRPC(flashlight.insertedBattery.charge);
+                    }
+                } else {
+                    if (flashlight.isBeingUsed && flashlight.itemProperties.requiresBattery) {
+                        if (flashlight.insertedBattery.charge > 0f)
+                        {
+                            if (!flashlight.itemProperties.itemIsTrigger)
+                            {
+                                flashlight.insertedBattery.charge -= Time.deltaTime / flashlight.itemProperties.batteryUsage;
+                            }
+                        }
+                    }
+                }
+            }
+
+            float p1 = 1-Plugin.FFConfig.startFade;
+            float p2 = Plugin.FFConfig.finalBrightness;
+            float unclamped = (1-p2)/p1*(flashlight.insertedBattery.charge-p1)+1;
+            float clamped = Mathf.Pow(Mathf.Clamp(unclamped,0,1), Mathf.Pow(2, Plugin.FFConfig.functionExponent));
+            if(flashlight.usingPlayerHelmetLight) {
+                PlayerControllerB player = (PlayerControllerB)previousPlayerHeldBy.GetValue(flashlight);
+                player.helmetLight.color = initialHelmetLightColor * clamped;
+            } else {
+                flashlight.flashlightBulb.color = initialBulbColor * clamped;
+                flashlight.flashlightBulbGlow.color = initialBulbGlowColor * clamped;
+            }
+        }
+
+        [ServerRpc]
+        public void BatteryChargeSyncServerRPC(float charge)
+        {
+            Plugin.sLogger.LogDebug("(server) Recived battery charge: " + charge);
+            BatteryChargeSyncClientRPC(charge);
+        }
+
+        [ClientRpc]
+        public void BatteryChargeSyncClientRPC(float charge) {
+            Plugin.sLogger.LogDebug("(client) Recived battery charge: " + charge);
+            if(!IsOwner) {
+                flashlight.insertedBattery.charge = charge;
+            }
+        }
+
+        public void PocketItem() {
+            PlayerControllerB player = (PlayerControllerB)previousPlayerHeldBy.GetValue(flashlight);
+            initialHelmetLightColor = player.helmetLight.color;
+        }
     } 
 
     [Serializable]
