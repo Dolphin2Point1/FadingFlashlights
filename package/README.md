@@ -1,4 +1,4 @@
-***"Monkey brain see that light get darker as energy used." - Me, just now***
+***"light get darker as energy used." - Me, just now***
 
 # Fading Flashlights
 

@@ -35,7 +35,6 @@ namespace FadingFlashlights
         [HarmonyPatch(typeof(FlashlightItem), "Start")]
         [HarmonyPrefix]
         public static void AddFlashlightFader(FlashlightItem __instance) {
-            Plugin.sLogger.LogInfo("adding flashlight fader component!");
             __instance.gameObject.AddComponent<FlashlightFaderComponent>();
             __instance.gameObject.GetComponent<FlashlightFaderComponent>().flashlight = __instance;
         }
@@ -66,6 +65,12 @@ namespace FadingFlashlights
             FFConfig.MessageManager.RegisterNamedMessageHandler("FadingFlashlights_OnReceiveConfigSync", FFConfig.OnReceiveSync);
             FFConfig.RequestSync();
         }
+
+        // [HarmonyPostfix]
+        // [HarmonyPatch(typeof(ItemCharger), "PlayChargeItemEffectClientRpc")]
+        // public void ActuallyChargeItem(int playerChargingItem) {
+            
+        // }
     }
 
     public class FlashlightFaderComponent : MonoBehaviour {
@@ -82,9 +87,9 @@ namespace FadingFlashlights
         }
 
         void Update() {
-            if(flashlight.IsOwner && flashlight.isBeingUsed && flashlight.itemProperties.requiresBattery && flashlight.insertedBattery.charge > 0f && !flashlight.itemProperties.itemIsTrigger) {
-                flashlight.insertedBattery.charge -= Time.deltaTime / flashlight.itemProperties.batteryUsage;
-            }
+            // if(!flashlight.IsOwner && flashlight.isBeingUsed && flashlight.itemProperties.requiresBattery && flashlight.insertedBattery.charge > 0f && !flashlight.itemProperties.itemIsTrigger) {
+            //     flashlight.insertedBattery.charge -= Time.deltaTime / flashlight.itemProperties.batteryUsage;
+            // }
 
             float p1 = 1-Plugin.FFConfig.startFade;
             float p2 = Plugin.FFConfig.finalBrightness;
