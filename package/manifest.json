@@ -1,6 +1,6 @@
  {
     "name": "FadingFlashlights",
-    "version_number": "1.0.1",
+    "version_number": "1.0.2",
     "website_url": "https://github.com/Dolphin2Point1/FadingFlashlights",
     "description": "Dims flashlights as the battery gets lower.",
     "dependencies": [
