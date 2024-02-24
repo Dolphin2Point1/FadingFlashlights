@@ -50,7 +50,8 @@ This affects how quickly your flashlight runs out of battery.
 
 
 # Credits
-I wrote all of the code myself, and drew the logo, but that doesn't mean I got no help.
+
+Set aside the *mostly* joke credits for a second. I need to give a **HUGE** shoutout to [Kesomannen](https://github.com/Kesomannen) for creating [ComponentBundler](https://github.com/Kesomannen/ComponentBundler) (This library is used to help with networking). I posed a question, he helped me with my problem, and he coded a great solution to that problem.
 
 Mommyplier - Help with Programming, Math, and the Logo  
 Braydon3DS - Emotional Support and distracting me with *Ratchet and Clank*  

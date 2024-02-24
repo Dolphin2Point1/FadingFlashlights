@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -16,11 +18,30 @@ namespace FadingFlashlights
     {
         public static ManualLogSource sLogger { get; internal set; }
         public static FFConfig FFConfig { get; internal set; }
+
+        private static void NetcodePatcher()
+        {
+            var types = Assembly.GetExecutingAssembly().GetTypes();
+            foreach (var type in types)
+            {
+                var methods = type.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+                foreach (var method in methods)
+                {
+                    var attributes = method.GetCustomAttributes(typeof(RuntimeInitializeOnLoadMethodAttribute), false);
+                    if (attributes.Length > 0)
+                    {
+                        method.Invoke(null, null);
+                    }
+                }
+            }
+        }
+
         public void Awake()
         {
             sLogger = Logger;
             // Plugin startup logic
             Patches.logger = Logger;
+            NetcodePatcher();
             
             FFConfig = new FFConfig(Config);
 
@@ -31,13 +52,6 @@ namespace FadingFlashlights
 
     class Patches {
         public static ManualLogSource logger;
-
-        [HarmonyPatch(typeof(FlashlightItem), "Start")]
-        [HarmonyPrefix]
-        public static void AddFlashlightFader(FlashlightItem __instance) {
-            __instance.gameObject.AddComponent<FlashlightFaderComponent>();
-            __instance.gameObject.GetComponent<FlashlightFaderComponent>().flashlight = __instance;
-        }
 
         [HarmonyPatch(typeof(FlashlightItem), "PocketItem")]
         [HarmonyPostfix]
@@ -65,31 +79,38 @@ namespace FadingFlashlights
             FFConfig.MessageManager.RegisterNamedMessageHandler("FadingFlashlights_OnReceiveConfigSync", FFConfig.OnReceiveSync);
             FFConfig.RequestSync();
         }
-
-        // [HarmonyPostfix]
-        // [HarmonyPatch(typeof(ItemCharger), "PlayChargeItemEffectClientRpc")]
-        // public void ActuallyChargeItem(int playerChargingItem) {
-            
-        // }
     }
 
-    public class FlashlightFaderComponent : MonoBehaviour {
+    public class FlashlightFaderComponent : NetworkBehaviour {
         public FlashlightItem flashlight;
         private Color initialBulbColor;
         private Color initialBulbGlowColor;
         private Color initialHelmetLightColor;
+        private float timeSinceLastSync;
+        private bool previouslyUsed;
         private static readonly FieldInfo previousPlayerHeldBy = typeof(FlashlightItem)
             .GetField("previousPlayerHeldBy", BindingFlags.NonPublic | BindingFlags.Instance);
         
         void Start() {
+            flashlight = gameObject.GetComponent<FlashlightItem>();
             initialBulbColor = flashlight.flashlightBulb.color;
             initialBulbGlowColor = flashlight.flashlightBulbGlow.color;
         }
 
         void Update() {
-            // if(!flashlight.IsOwner && flashlight.isBeingUsed && flashlight.itemProperties.requiresBattery && flashlight.insertedBattery.charge > 0f && !flashlight.itemProperties.itemIsTrigger) {
-            //     flashlight.insertedBattery.charge -= Time.deltaTime / flashlight.itemProperties.batteryUsage;
-            // }
+            if(flashlight.isBeingUsed) {
+                if(IsOwner) {
+                    timeSinceLastSync += Time.deltaTime;
+                    if(timeSinceLastSync > 5f || (!previouslyUsed && flashlight.isBeingUsed)) {
+                        BatteryChargeSyncServerRPC(flashlight.insertedBattery.charge);
+                        timeSinceLastSync = 0f;
+                    }
+                } else {
+                    if (flashlight.itemProperties.requiresBattery && flashlight.insertedBattery.charge > 0f) {
+                        flashlight.insertedBattery.charge -= Time.deltaTime / flashlight.itemProperties.batteryUsage;
+                    }
+                }
+            }
 
             float p1 = 1-Plugin.FFConfig.startFade;
             float p2 = Plugin.FFConfig.finalBrightness;
@@ -102,11 +123,25 @@ namespace FadingFlashlights
                 flashlight.flashlightBulb.color = initialBulbColor * clamped;
                 flashlight.flashlightBulbGlow.color = initialBulbGlowColor * clamped;
             }
+
+            previouslyUsed = flashlight.isBeingUsed;
         }
 
         public void PocketItem() {
             PlayerControllerB player = (PlayerControllerB)previousPlayerHeldBy.GetValue(flashlight);
             initialHelmetLightColor = player.helmetLight.color;
+        }
+
+        [ServerRpc]
+        public void BatteryChargeSyncServerRPC(float charge){
+            BatteryChargeSyncClientRPC(charge);
+        }
+        
+        [ClientRpc]
+        public void BatteryChargeSyncClientRPC(float charge) {
+            if(!IsOwner) {
+                flashlight.insertedBattery.charge = charge;
+            }
         }
     } 
 

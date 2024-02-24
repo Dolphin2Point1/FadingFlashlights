@@ -4,6 +4,7 @@
     "website_url": "https://github.com/Dolphin2Point1/FadingFlashlights",
     "description": "Dims flashlights as the battery gets lower.",
     "dependencies": [
-        "BepInEx-BepInExPack-5.4.2100"
+        "BepInEx-BepInExPack-5.4.2100",
+        "Kesomannen-ComponentBundler-1.0.0"
     ]
 }
